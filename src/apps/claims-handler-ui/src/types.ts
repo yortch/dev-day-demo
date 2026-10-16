@@ -2,6 +2,7 @@ export interface Claim {
   claimId: string;
   policyId?: string;
   lossDate?: string;
+  reportedDate?: string;
   claimantStatement?: string;
   repairEstimate?: { amount: number; currency: string };
 }
@@ -24,6 +25,11 @@ export interface Assessment {
   claimId: string;
   summary: string;
   completenessFindings: Finding[];
+  recommendedActions: {
+    actionId: string;
+    rationale: string;
+    humanReviewRequired: true;
+  }[];
   policyCitations: Citation[];
   policyBasis: "grounded" | "unavailable" | "not_assessed";
   triageRecommendation: string;

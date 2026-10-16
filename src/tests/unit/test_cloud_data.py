@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 import httpx
 import pytest
@@ -115,12 +115,18 @@ def test_cloud_assessment_uses_live_data_and_citations() -> None:
     store.find_claim.return_value = fixtures.get_claim("clm-demo-002")
     store.find_policy.return_value = fixtures.get_policy("pol-demo-auto")
     store.find_artifact.return_value = fixtures.artifacts["art-demo-estimate-002"]
-    knowledge.lookup.return_value = fixtures.lookup_policy("pol-demo-auto", "collision")
+    coverage_citations = fixtures.lookup_policy("pol-demo-auto", "collision")
+    process_citations = fixtures.lookup_policy("pol-demo-auto", "Section 4 claims process")
+    knowledge.lookup.side_effect = [coverage_citations, process_citations]
     assessment = DemoService(store=store, knowledge=knowledge).assess_claim("clm-demo-002")
     assert assessment.human_review_required
     assert assessment.policy_basis == "grounded"
     store.find_artifact.assert_called_once_with("art-demo-estimate-002")
-    knowledge.lookup.assert_called_once()
+    knowledge.lookup.assert_has_calls([
+        call("pol-demo-auto", store.find_claim.return_value.claimant_statement),
+        call("pol-demo-auto", "Section 4 claims process report 30 days theft vandalism police"),
+    ])
+    assert any(citation.section.startswith("Section 4") for citation in assessment.policy_citations)
 
 
 def test_search_policy_filter_is_not_caller_controlled() -> None:

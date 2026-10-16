@@ -129,6 +129,10 @@ export default function App({ session }: { session: Session }) {
               <dt>Loss date</dt>
               <dd>{selectedClaim.lossDate ?? "Not provided"}</dd>
             </div>
+            <div>
+              <dt>Reported date</dt>
+              <dd>{selectedClaim.reportedDate ?? "Not provided"}</dd>
+            </div>
             <div className="statement">
               <dt>Intake statement</dt>
               <dd>{selectedClaim.claimantStatement ?? "Not provided"}</dd>
@@ -159,7 +163,7 @@ export default function App({ session }: { session: Session }) {
               <p>
                 <strong>Handler action required</strong>
                 <br />
-                Confirm the evidence and decide the appropriate next step.
+                Confirm the automated checks or follow up on the flagged information.
               </p>
             </div>
             <h3>Deterministic review flags</h3>
@@ -180,6 +184,12 @@ export default function App({ session }: { session: Session }) {
             ) : (
               <p className="muted">No deterministic review flags were raised.</p>
             )}
+            <h3>Confirm or follow up</h3>
+            <ul>
+              {assessment.recommendedActions.map((action) => (
+                <li key={action.actionId}>{action.rationale}</li>
+              ))}
+            </ul>
           </section>
 
           <aside className="panel" aria-labelledby="evidence-heading">

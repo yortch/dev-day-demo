@@ -32,6 +32,13 @@ Open the Vite URL printed in the terminal (normally `http://localhost:5173`). Th
 
 The local workflow is deterministic and uses checked-in synthetic fixtures. The optional Foundry integration is isolated behind configuration and has not been exercised against a live Foundry project.
 
+Every assessment automatically checks the demo policy's Section 4 claims-process rules:
+
+- `reportedDate` is the date the claim was first reported. More than 30 calendar days after `lossDate` raises a late-reporting flag; exactly 30 days is within the limit. Artifact upload times are not used as reporting dates.
+- Missing reporting/loss dates require information follow-up; a reporting date before the loss requires correction rather than being treated as timely.
+- Theft or vandalism terms in the claimant statement (including “stolen” and “vandalized”) trigger a check for a `police_report` artifact belonging to the claim. Without one, the handler is prompted to request the police report and report number. Statement matching is a deterministic review aid, not incident classification; the handler confirms whether the requirement applies.
+- The handler workspace displays the flags, retrieved Section 4 evidence when available, and recommended follow-up. All results still require human confirmation; no coverage decision is made.
+
 ## Validation
 
 ```bash
