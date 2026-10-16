@@ -30,6 +30,7 @@ class Claim(DemoModel):
     policy_id: str | None = Field(default=None, pattern=r"^pol-[a-z0-9-]+$")
     vehicle_id: str | None = Field(default=None, pattern=r"^veh-[a-z0-9-]+$")
     loss_date: date | None = None
+    reported_date: date | None = None
     reported_driver_id: str | None = Field(default=None, pattern=r"^drv-[a-z0-9-]+$")
     claimant_statement: str | None = Field(default=None, min_length=1, max_length=10000)
     artifact_ids: list[str] = Field(default_factory=list)
@@ -77,6 +78,9 @@ class Finding(DemoModel):
         "required_document_missing",
         "policy_inactive_on_loss_date",
         "driver_not_listed",
+        "section_4_late_reporting",
+        "section_4_reporting_dates_inconsistent",
+        "section_4_missing_police_report",
         "repair_estimate_above_review_threshold",
         "possible_duplicate_artifact",
         "possible_prior_damage",

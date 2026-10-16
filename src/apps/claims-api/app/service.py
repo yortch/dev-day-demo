@@ -189,6 +189,7 @@ class DemoService:
             for name, value in (
                 ("policy reference", claim.policy_id),
                 ("loss date", claim.loss_date),
+                ("reported date", claim.reported_date),
                 ("vehicle", claim.vehicle_id),
                 ("reporting driver", claim.reported_driver_id),
                 ("claimant statement", claim.claimant_statement),
@@ -228,6 +229,8 @@ class DemoService:
             )
             for artifact_id in claim.artifact_ids
         }
+        process_findings = self._claims_process_findings(claim, artifacts)
+        findings.extend(process_findings)
         policy_citations: list[Citation] = []
         policy_basis = "unavailable" if claim.policy_id and policy is None else "not_assessed"
         if policy and claim.loss_date and claim.claimant_statement:
@@ -267,6 +270,17 @@ class DemoService:
                     )
                 )
             policy_citations = self.lookup_policy(policy.policy_id, claim.claimant_statement)
+            if policy_citations:
+                policy_basis = "grounded"
+        if policy and (process_findings or (claim.loss_date and claim.reported_date)):
+            process_citations = self.lookup_policy(
+                policy.policy_id, "Section 4 claims process report 30 days theft vandalism police"
+            )
+            for citation in process_citations:
+                if re.match(r"^Section 4\b", citation.section, flags=re.IGNORECASE) and not any(
+                    existing.citation_id == citation.citation_id for existing in policy_citations
+                ):
+                    policy_citations.append(citation)
             if policy_citations:
                 policy_basis = "grounded"
         if (
@@ -338,6 +352,58 @@ class DemoService:
             human_review_required=True,
         )
 
+    def _claims_process_findings(
+        self, claim: Claim, artifacts: dict[str, Artifact | None]
+    ) -> list[Finding]:
+        findings: list[Finding] = []
+        if claim.loss_date is not None and claim.reported_date is not None:
+            days_after_loss = (claim.reported_date - claim.loss_date).days
+            if days_after_loss > 30:
+                findings.append(
+                    Finding(
+                        finding_code="section_4_late_reporting",
+                        status="needs_review",
+                        description=(
+                            f"Claim reported {days_after_loss} days after loss "
+                            f"({claim.loss_date} to {claim.reported_date}), exceeding the "
+                            "Section 4 limit of 30 days. Handler confirmation is required."
+                        ),
+                    )
+                )
+            elif days_after_loss < 0:
+                findings.append(
+                    Finding(
+                        finding_code="section_4_reporting_dates_inconsistent",
+                        status="inconsistent",
+                        description=(
+                            "The reported date precedes the loss date. Confirm the dates "
+                            "before checking the Section 4 reporting deadline."
+                        ),
+                    )
+                )
+        if re.search(
+            r"\b(theft|stolen|vandalism|vandali[sz]ed|vandali[sz]ation)\b",
+            claim.claimant_statement or "",
+            flags=re.IGNORECASE,
+        ) and not any(
+            artifact is not None
+            and artifact.claim_id == claim.claim_id
+            and artifact.artifact_type == "police_report"
+            for artifact in artifacts.values()
+        ):
+            findings.append(
+                Finding(
+                    finding_code="section_4_missing_police_report",
+                    status="missing",
+                    description=(
+                        "The statement indicates possible theft or vandalism, but no police "
+                        "report artifact is available for this claim. Section 4 requires a "
+                        "police report and report number; follow up with the claimant."
+                    ),
+                )
+            )
+        return findings
+
     def _recommended_actions(
         self, findings: list[Finding], citations: list[Citation]
     ) -> list[RecommendedAction]:
@@ -357,6 +423,21 @@ class DemoService:
             "driver_not_listed": (
                 "verify_driver_listing",
                 "Have a handler verify the driver information against the complete policy record.",
+            ),
+            "section_4_late_reporting": (
+                "review_conflicting_information",
+                "Confirm the loss and reported dates and follow up on the Section 4 "
+                "late-reporting flag; do not infer a coverage decision.",
+            ),
+            "section_4_reporting_dates_inconsistent": (
+                "review_conflicting_information",
+                "Confirm or correct the loss and reported dates before reviewing the "
+                "Section 4 reporting deadline.",
+            ),
+            "section_4_missing_police_report": (
+                "request_missing_information",
+                "Confirm whether theft or vandalism applies and request the missing "
+                "police report and report number for handler review under Section 4.",
             ),
             "repair_estimate_above_review_threshold": (
                 "review_repair_estimate",

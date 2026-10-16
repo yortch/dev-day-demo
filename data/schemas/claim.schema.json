@@ -30,6 +30,11 @@
       "format": "date",
       "description": "Optional at intake so missing loss-date information can be assessed."
     },
+    "reportedDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the claim was first reported, not an artifact upload date. Missing dates require handler follow-up for the Section 4 deadline check."
+    },
     "reportedDriverId": {
       "type": "string",
       "pattern": "^drv-[a-z0-9-]+$",
